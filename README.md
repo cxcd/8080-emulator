@@ -1,3 +1,3 @@
-# 8080-emulator
+# 8080 Emulator
 
-Currently in development
+Work in progress...
