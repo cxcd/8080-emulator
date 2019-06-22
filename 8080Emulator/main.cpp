@@ -9,10 +9,10 @@
 
 // Exit program when an unimplemented instruction is encountered
 int unimplementedInstruction(uint8_t opcode) {
-	std::cout << "Error: Instruction 0x" 
+	std::cout << "Error: Instruction " 
 			  << std::uppercase << std::hex << std::setw(2) << std::setfill('0') 
 			  << (int)opcode << " is unimplemented\n";
-	return 1;
+	return 0;
 }
 
 void printState(state *s) {
@@ -224,21 +224,32 @@ void emulate8080(state *s) {
 		s->r.pc++; 
 		break;
 	case 0x1F: // RAR
-		unimplementedInstruction(*opcode); break;
+		s->cc.cy = s->r.a & 1;
+		s->offset = (uint16_t)s->r.a;
+		s->r.a = (s->r.a >> 1) | (uint8_t)(s->offset << 7);
+		break;
 	case 0x20: // NOP
 		break;
 	case 0x21: // LXI H, D16
-		unimplementedInstruction(*opcode); break;
+		s->r.l = opcode[1];
+		s->r.h = opcode[2];
+		s->r.pc += 2; 
+		break;
 	case 0x22: // SHLD adr
 		unimplementedInstruction(*opcode); break;
 	case 0x23: // INX H
-		unimplementedInstruction(*opcode); break;
+		add(s, s->r.h, s->r.l, (uint8_t)1); 
+		break;
 	case 0x24: // INR H
-		unimplementedInstruction(*opcode); break;
+		add(s, s->r.h, (uint8_t)1, false);
+		break;
 	case 0x25: // DCR H
-		unimplementedInstruction(*opcode); break;
+		subtract(s, s->r.h, (uint8_t)1, false); 
+		break;
 	case 0x26: // MVI H, D8
-		unimplementedInstruction(*opcode); break;
+		s->r.h = opcode[1];
+		s->r.pc++; 
+		break;
 	case 0x27: // DAA
 		unimplementedInstruction(*opcode); break;
 	case 0x28: // NOP

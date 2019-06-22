@@ -3,7 +3,7 @@
 
 class conditionCodes {
 public:
-	uint8_t z, s, p, cy, ac, pad;
+	uint8_t z, s, p, cy, ac;
 	conditionCodes();
 };
 
