@@ -61,12 +61,14 @@ uint8_t parity(uint16_t x, uint16_t size) {
 	}
 	return (p & 0x01) == 0;
 }
+
 void checkCarry(state *s, uint16_t result) {
 	s->cc.cy = (result & 0xFF00) > 0;
 }
 void checkCarry(state *s, uint32_t result) {
 	s->cc.cy = (result & 0xFFFF0000) > 0;
 }
+
 void checkFlags(state *s, uint16_t result, bool checkCY) {
 	s->cc.z = (result & 0xFF) == 0; // Check if equal to zero
 	s->cc.s = (result & 0x80) == 0x80; // Check if negative (msb is set)
@@ -76,6 +78,7 @@ void checkFlags(state *s, uint16_t result, bool checkCY) {
 	}
 	s->cc.ac = result >= 0x0F; // Check half carry
 }
+
 // Add value to 8 bit register
 void add(state *s, uint8_t &reg, uint8_t val, bool cy) {
 	uint16_t result = (uint16_t)reg + (uint16_t)val;
@@ -83,7 +86,7 @@ void add(state *s, uint8_t &reg, uint8_t val, bool cy) {
 	checkFlags(s, result, cy);
 }
 // Add value to 16 bit register
-void add(state *s, uint8_t &reg1, uint8_t &reg2, uint8_t val) {
+void add(uint8_t &reg1, uint8_t &reg2, uint8_t val) {
 	uint16_t result = (reg1 << 8 | reg2) + val;
 	reg1 = result >> 8;
 	reg2 = result & 0xFF;
@@ -97,6 +100,7 @@ void add(state *s, uint8_t &reg1, uint8_t &reg2, uint8_t &reg3, uint8_t &reg4) {
 	reg2 = result & 0xFF;
 	checkCarry(s, result);
 }
+
 // Subtract value from 8 bit register
 void subtract(state *s, uint8_t &reg, uint8_t val, bool cy) {
 	uint16_t result = (uint16_t)reg - (uint16_t)val;
@@ -104,10 +108,24 @@ void subtract(state *s, uint8_t &reg, uint8_t val, bool cy) {
 	checkFlags(s, result, cy);
 }
 // Subtract value from 16 bit register
-void subtract(state *s, uint8_t &reg1, uint8_t &reg2, uint8_t val) {
+void subtract(uint8_t &reg1, uint8_t &reg2, uint8_t val) {
 	uint16_t result = (reg1 << 8 | reg2) - val;
 	reg1 = result >> 8;
 	reg2 = result & 0xFF;
+}
+
+// Move 8 bit register to 8 bit register
+void move(uint8_t &reg1, uint8_t &reg2) {
+	reg1 = reg2;
+}
+// Move 8 bit register to/from register at location HL
+void move(state *s, uint8_t &reg, bool toHL) {
+	s->offset = (s->r.h << 8) | s->r.l;
+	if (toHL) {
+		s->memory[s->offset] = reg;
+	} else {
+		reg = s->memory[s->offset];
+	}
 }
 
 // Parse code and execute instruction
@@ -124,11 +142,11 @@ void emulate8080(state *s) {
 		s->r.pc += 2;
 		break;
 	case 0x02: // STAX B
-		s->offset = ((uint16_t)s->r.b << 8) | s->r.c;
+		s->offset = (s->r.b << 8) | s->r.c;
 		s->memory[s->offset] = s->r.a;
 		break;
 	case 0x03: // INX B
-		add(s, s->r.b, s->r.c, (uint8_t)1);
+		add(s->r.b, s->r.c, (uint8_t)1);
 		break;
 	case 0x04: // INR B
 		add(s, s->r.b, (uint8_t)1, false);
@@ -155,7 +173,7 @@ void emulate8080(state *s) {
 		s->r.a = s->memory[s->offset];
 		break;
 	case 0x0B: // DCX B
-		subtract(s, s->r.b, s->r.c, (uint8_t)1);
+		subtract(s->r.b, s->r.c, (uint8_t)1);
 		break;
 	case 0x0C: // INR C
 		add(s, s->r.c, (uint8_t)1, false);
@@ -169,7 +187,7 @@ void emulate8080(state *s) {
 		break;
 	case 0x0F: // RRC
 		s->cc.cy = s->r.a & 1;
-		s->offset = (uint16_t)s->cc.cy;
+		s->offset = s->cc.cy;
 		s->r.a = (s->r.a >> 1) | (uint8_t)(s->offset << 7);
 		break;
 	case 0x10: // NOP
@@ -180,11 +198,11 @@ void emulate8080(state *s) {
 		s->r.pc += 2;
 		break;
 	case 0x12: // STAX D
-		s->offset = ((uint16_t)s->r.d << 8) | s->r.e;
+		s->offset = (s->r.d << 8) | s->r.e;
 		s->memory[s->offset] = s->r.a; 
 		break;
 	case 0x13: // INX D
-		add(s, s->r.d, s->r.e, (uint8_t)1);
+		add(s->r.d, s->r.e, (uint8_t)1);
 		break;
 	case 0x14: // INR D
 		add(s, s->r.d, (uint8_t)1, false); 
@@ -197,7 +215,7 @@ void emulate8080(state *s) {
 		s->r.pc++; 
 		break;
 	case 0x17: // RAL
-		s->offset = (uint16_t)s->cc.cy;
+		s->offset = s->cc.cy;
 		s->cc.cy = (s->r.a >> 7) & 1;
 		s->r.a = (s->r.a << 1) | (uint8_t)s->offset; 
 		break;
@@ -211,7 +229,7 @@ void emulate8080(state *s) {
 		s->r.a = s->memory[s->offset];
 		break;
 	case 0x1B: // DCX D
-		subtract(s, s->r.d, s->r.e, (uint8_t)1);
+		subtract(s->r.d, s->r.e, (uint8_t)1);
 		break;
 	case 0x1C: // INR E
 		add(s, s->r.e, (uint8_t)1, false); 
@@ -238,7 +256,7 @@ void emulate8080(state *s) {
 	case 0x22: // SHLD adr
 		unimplementedInstruction(*opcode); break;
 	case 0x23: // INX H
-		add(s, s->r.h, s->r.l, (uint8_t)1); 
+		add(s->r.h, s->r.l, (uint8_t)1); 
 		break;
 	case 0x24: // INR H
 		add(s, s->r.h, (uint8_t)1, false);
@@ -271,6 +289,10 @@ void emulate8080(state *s) {
 	case 0x30: // NOP
 		break;
 
+	// Jumping ahead
+	case 0x51: // MOV D, C
+		move(s->r.d, s->r.c);
+		break;
 
 	// Jumping ahead
 	case 0x80: // ADD B
@@ -286,13 +308,14 @@ void emulate8080(state *s) {
 	case 0x85: // ADD L
 		add(s, s->r.a, s->r.l, true); break;
 	case 0x86: // ADD M
-		s->offset = ((uint16_t)s->r.h << 8) | s->r.l;
+		s->offset = (s->r.h << 8) | s->r.l;
 		add(s, s->r.a, s->memory[s->offset], true);
 		break;
 	case 0x87: // ADD A
 		add(s, s->r.a, s->r.a, true); break;
 	case 0x88: // ADC B
 		break;
+
 	// Jumping to end
 	case 0xFF: unimplementedInstruction(*opcode); break;
 	default: unimplementedInstruction(*opcode); break;
