@@ -5,7 +5,31 @@
 #include <vector>
 #include <fstream>
 #include <iterator>
-#include "cpu.hpp"
+
+class conditionCodes {
+public:
+	uint8_t z, s, p, cy, ac;
+	conditionCodes() : z(1), s(1), p(1), cy(1), ac(1) {}
+};
+
+class registers {
+public:
+	uint8_t a, b, c, d, e, h, l;
+	uint16_t sp, pc;
+	registers() : a(0), b(0), c(0), d(0), e(0), h(0), l(0) {}
+};
+
+class state {
+public:
+	conditionCodes cc;
+	registers r;
+	uint8_t enable;
+	std::vector<uint8_t> memory;
+	uint16_t offset;
+	state() {
+		memory.reserve(0x10000); // Reserve 16KB
+	}
+};
 
 // Exit program when an unimplemented instruction is encountered
 int unimplementedInstruction(uint8_t opcode) {
