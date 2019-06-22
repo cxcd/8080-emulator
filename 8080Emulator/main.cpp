@@ -101,25 +101,32 @@ void add(state *s, uint8_t &reg1, uint8_t &reg2, uint8_t &reg3, uint8_t &reg4) {
 	checkCarry(s, result);
 }
 
+// Add value and carry to 8 bit register
+void adc(state *s, uint8_t &reg, uint8_t val, bool cy) {
+	uint16_t result = (uint16_t)reg + (uint16_t)val + s->cc.cy;
+	reg = result & 0xFF;
+	checkFlags(s, result, cy);
+}
+
 // Subtract value from 8 bit register
-void subtract(state *s, uint8_t &reg, uint8_t val, bool cy) {
+void sub(state *s, uint8_t &reg, uint8_t val, bool cy) {
 	uint16_t result = (uint16_t)reg - (uint16_t)val;
 	reg = result & 0xFF;
 	checkFlags(s, result, cy);
 }
 // Subtract value from 16 bit register
-void subtract(uint8_t &reg1, uint8_t &reg2, uint8_t val) {
+void sub(uint8_t &reg1, uint8_t &reg2, uint8_t val) {
 	uint16_t result = (reg1 << 8 | reg2) - val;
 	reg1 = result >> 8;
 	reg2 = result & 0xFF;
 }
 
 // Move 8 bit register to 8 bit register
-void move(uint8_t &reg1, uint8_t &reg2) {
+void mov(uint8_t &reg1, uint8_t &reg2) {
 	reg1 = reg2;
 }
 // Move 8 bit register to/from register at location HL
-void move(state *s, uint8_t &reg, bool toHL) {
+void mov(state *s, uint8_t &reg, bool toHL) {
 	s->offset = (s->r.h << 8) | s->r.l;
 	if (toHL) {
 		s->memory[s->offset] = reg;
@@ -152,7 +159,7 @@ void emulate8080(state *s) {
 		add(s, s->r.b, (uint8_t)1, false);
 		break;
 	case 0x05: // DCR B
-		subtract(s, s->r.b, (uint8_t)1, false);
+		sub(s, s->r.b, (uint8_t)1, false);
 		break;
 	case 0x06: // MVI B, D8
 		s->r.b = opcode[1];
@@ -173,13 +180,13 @@ void emulate8080(state *s) {
 		s->r.a = s->memory[s->offset];
 		break;
 	case 0x0B: // DCX B
-		subtract(s->r.b, s->r.c, (uint8_t)1);
+		sub(s->r.b, s->r.c, (uint8_t)1);
 		break;
 	case 0x0C: // INR C
 		add(s, s->r.c, (uint8_t)1, false);
 		break;
 	case 0x0D: // DCR C
-		subtract(s, s->r.c, (uint8_t)1, false);
+		sub(s, s->r.c, (uint8_t)1, false);
 		break;
 	case 0x0E: // MVI C, D8
 		s->r.c = opcode[1];
@@ -208,7 +215,7 @@ void emulate8080(state *s) {
 		add(s, s->r.d, (uint8_t)1, false); 
 		break;
 	case 0x15: // DCR D
-		subtract(s, s->r.d, (uint8_t)1, false); 
+		sub(s, s->r.d, (uint8_t)1, false); 
 		break;
 	case 0x16: // MVI D, D8
 		s->r.d = opcode[1];
@@ -229,13 +236,13 @@ void emulate8080(state *s) {
 		s->r.a = s->memory[s->offset];
 		break;
 	case 0x1B: // DCX D
-		subtract(s->r.d, s->r.e, (uint8_t)1);
+		sub(s->r.d, s->r.e, (uint8_t)1);
 		break;
 	case 0x1C: // INR E
 		add(s, s->r.e, (uint8_t)1, false); 
 		break;
 	case 0x1D: // DCR E
-		subtract(s, s->r.e, (uint8_t)1, false); 
+		sub(s, s->r.e, (uint8_t)1, false); 
 		break;
 	case 0x1E: // MVI E, D8
 		s->r.e = opcode[1];
@@ -262,7 +269,7 @@ void emulate8080(state *s) {
 		add(s, s->r.h, (uint8_t)1, false);
 		break;
 	case 0x25: // DCR H
-		subtract(s, s->r.h, (uint8_t)1, false); 
+		sub(s, s->r.h, (uint8_t)1, false); 
 		break;
 	case 0x26: // MVI H, D8
 		s->r.h = opcode[1];
@@ -273,47 +280,118 @@ void emulate8080(state *s) {
 	case 0x28: // NOP
 		break;
 	case 0x29: // DAD H
-		unimplementedInstruction(*opcode); break;
+		add(s, s->r.h, s->r.l, s->r.h, s->r.l); 
+		break;
 	case 0x2A: // LHLD adr
 		unimplementedInstruction(*opcode); break;
 	case 0x2B: // DCX H
-		unimplementedInstruction(*opcode); break;
+		sub(s->r.h, s->r.l, (uint8_t)1); 
+		break;
 	case 0x2C: // INR L
-		unimplementedInstruction(*opcode); break;
+		add(s, s->r.l, (uint8_t)1, false); 
+		break;
 	case 0x2D: // DCR L
-		unimplementedInstruction(*opcode); break;
+		sub(s, s->r.l, (uint8_t)1, false); 
+		break;
 	case 0x2E: // MVI L, D8
-		unimplementedInstruction(*opcode); break;
+		s->r.l = opcode[1];
+		s->r.pc++; 
+		break;
 	case 0x2F: // CMA
-		unimplementedInstruction(*opcode); break;
+		s->r.a = ~s->r.a;
+		break;
 	case 0x30: // NOP
 		break;
+	case 0x31: // LXI SP, D16
+		unimplementedInstruction(*opcode); break;
+	case 0x32: // STA adr
+		unimplementedInstruction(*opcode); break;
+	case 0x33: // INX SP
+		unimplementedInstruction(*opcode); break;
+	case 0x34: // INR M
+		unimplementedInstruction(*opcode); break;
+	case 0x35: // DCR M
+		unimplementedInstruction(*opcode); break;
+	case 0x36: // MVI M, D8
+		unimplementedInstruction(*opcode); break;
+	case 0x37: // STC
+		s->cc.cy = 1;
+		break;
+	case 0x38: // NOP
+		break;
+	case 0x39: // DAD SP
+		unimplementedInstruction(*opcode); break;
+	case 0x3A: // LDA adr
+		unimplementedInstruction(*opcode); break;
+	case 0x3B: // DCX SP
+		unimplementedInstruction(*opcode); break;
+	case 0x3C: // INR A
+		unimplementedInstruction(*opcode); break;
+	case 0x3D: // DCR A
+		unimplementedInstruction(*opcode); break;
+	case 0x3E: // MVI A, D8
+		unimplementedInstruction(*opcode); break;
+	case 0x3F: // CMC
+		s->cc.cy = ~s->cc.cy;
+		break;
 
-	// Jumping ahead
+
+	
+		// Jumping ahead
 	case 0x51: // MOV D, C
-		move(s->r.d, s->r.c);
+		mov(s->r.d, s->r.c);
 		break;
 
 	// Jumping ahead
 	case 0x80: // ADD B
-		add(s, s->r.a, s->r.b, true); break;
+		add(s, s->r.a, s->r.b, true); 
+		break;
 	case 0x81: // ADD C
-		add(s, s->r.a, s->r.c, true); break;
+		add(s, s->r.a, s->r.c, true); 
+		break;
 	case 0x82: // ADD D
-		add(s, s->r.a, s->r.d, true); break;
+		add(s, s->r.a, s->r.d, true); 
+		break;
 	case 0x83: // ADD E
-		add(s, s->r.a, s->r.e, true); break;
+		add(s, s->r.a, s->r.e, true);
+		break;
 	case 0x84: // ADD H
-		add(s, s->r.a, s->r.h, true); break;
+		add(s, s->r.a, s->r.h, true); 
+		break;
 	case 0x85: // ADD L
-		add(s, s->r.a, s->r.l, true); break;
+		add(s, s->r.a, s->r.l, true); 
+		break;
 	case 0x86: // ADD M
 		s->offset = (s->r.h << 8) | s->r.l;
 		add(s, s->r.a, s->memory[s->offset], true);
 		break;
 	case 0x87: // ADD A
-		add(s, s->r.a, s->r.a, true); break;
+		add(s, s->r.a, s->r.a, true); 
+		break;
 	case 0x88: // ADC B
+		adc(s, s->r.a, s->r.b, true);
+		break;
+	case 0x89: // ADC C
+		adc(s, s->r.a, s->r.c, true);
+		break;
+	case 0x8A: // ADC D
+		adc(s, s->r.a, s->r.d, true);
+		break;
+	case 0x8B: // ADC E
+		adc(s, s->r.a, s->r.e, true);
+		break;
+	case 0x8C: // ADC H
+		adc(s, s->r.a, s->r.h, true);
+		break;
+	case 0x8D: // ADC L
+		adc(s, s->r.a, s->r.l, true);
+		break;
+	case 0x8E: // ADC M
+		s->offset = (s->r.h << 8) | s->r.l;
+		adc(s, s->r.a, s->memory[s->offset], true);
+		break;
+	case 0x8F: // ADC A
+		adc(s, s->r.a, s->r.a, true);
 		break;
 
 	// Jumping to end
