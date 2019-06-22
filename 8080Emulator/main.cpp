@@ -76,23 +76,38 @@ void checkFlags(state *s, uint16_t result, bool checkCY) {
 	}
 	s->cc.ac = result >= 0x0F; // Check half carry
 }
+// Add value to 8 bit register
 void add(state *s, uint8_t &reg, uint8_t val, bool cy) {
 	uint16_t result = (uint16_t)reg + (uint16_t)val;
 	reg = result & 0xFF;
 	checkFlags(s, result, cy);
 }
+// Add value to 16 bit register
+void add(state *s, uint8_t &reg1, uint8_t &reg2, uint8_t val) {
+	uint16_t result = (reg1 << 8 | reg2) + val;
+	reg1 = result >> 8;
+	reg2 = result & 0xFF;
+}
+// Add 16 bit register to 16 bit register
 void add(state *s, uint8_t &reg1, uint8_t &reg2, uint8_t &reg3, uint8_t &reg4) {
-	uint32_t hl = (reg1 << 8) | reg2;
-	uint32_t bc = (reg3 << 8) | reg4;
-	uint32_t result = hl + bc;
+	uint32_t reg12 = (reg1 << 8) | reg2;
+	uint32_t reg34 = (reg3 << 8) | reg4;
+	uint32_t result = reg12 + reg34;
 	reg1 = (result & 0xFF00) >> 8;
 	reg2 = result & 0xFF;
 	checkCarry(s, result);
 }
+// Subtract value from 8 bit register
 void subtract(state *s, uint8_t &reg, uint8_t val, bool cy) {
 	uint16_t result = (uint16_t)reg - (uint16_t)val;
 	reg = result & 0xFF;
 	checkFlags(s, result, cy);
+}
+// Subtract value from 16 bit register
+void subtract(state *s, uint8_t &reg1, uint8_t &reg2, uint8_t val) {
+	uint16_t result = (reg1 << 8 | reg2) - val;
+	reg1 = result >> 8;
+	reg2 = result & 0xFF;
 }
 
 // Parse code and execute instruction
@@ -113,9 +128,7 @@ void emulate8080(state *s) {
 		s->memory[s->offset] = s->r.a;
 		break;
 	case 0x03: // INX B
-		s->offset = (((uint16_t)s->r.b << 8) | s->r.c) + 1;
-		s->r.b = s->offset >> 8;
-		s->r.c = s->offset & 0xFF;
+		add(s, s->r.b, s->r.c, (uint8_t)1);
 		break;
 	case 0x04: // INR B
 		add(s, s->r.b, (uint8_t)1, false);
@@ -142,9 +155,7 @@ void emulate8080(state *s) {
 		s->r.a = s->memory[s->offset];
 		break;
 	case 0x0B: // DCX B
-		s->offset = ((s->r.b << 8) | s->r.c) - 1;
-		s->r.b = s->offset >> 8;
-		s->r.c = s->offset & 0xFF;
+		subtract(s, s->r.b, s->r.c, (uint8_t)1);
 		break;
 	case 0x0C: // INR C
 		add(s, s->r.c, (uint8_t)1, false);
@@ -173,9 +184,7 @@ void emulate8080(state *s) {
 		s->memory[s->offset] = s->r.a; 
 		break;
 	case 0x13: // INX D
-		s->offset = (((uint16_t)s->r.d << 8) | s->r.e) + 1;
-		s->r.d = s->offset >> 8;
-		s->r.e = s->offset & 0xFF; 
+		add(s, s->r.d, s->r.e, (uint8_t)1);
 		break;
 	case 0x14: // INR D
 		add(s, s->r.d, (uint8_t)1, false); 
@@ -202,17 +211,18 @@ void emulate8080(state *s) {
 		s->r.a = s->memory[s->offset];
 		break;
 	case 0x1B: // DCX D
-		s->offset = ((s->r.d << 8) | s->r.e) - 1;
-		s->r.d = s->offset >> 8;
-		s->r.e = s->offset & 0xFF;
+		subtract(s, s->r.d, s->r.e, (uint8_t)1);
 		break;
 	case 0x1C: // INR E
 		add(s, s->r.e, (uint8_t)1, false); 
 		break;
 	case 0x1D: // DCR E
-		unimplementedInstruction(*opcode); break;
+		subtract(s, s->r.e, (uint8_t)1, false); 
+		break;
 	case 0x1E: // MVI E, D8
-		unimplementedInstruction(*opcode); break;
+		s->r.e = opcode[1];
+		s->r.pc++; 
+		break;
 	case 0x1F: // RAR
 		unimplementedInstruction(*opcode); break;
 	case 0x20: // NOP
@@ -285,6 +295,7 @@ void emulate8080(state *s) {
 
 void testRegisters(state *s) {
 	s->r.c = 0x01;
+	s->r.e = 0xFF;
 }
 
 int main(int argc, char *argv[]) {
