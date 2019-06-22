@@ -334,15 +334,197 @@ void emulate8080(state *s) {
 	case 0x3F: // CMC
 		s->cc.cy = ~s->cc.cy;
 		break;
-
-
-	
-		// Jumping ahead
+	case 0x40: // MOV B, B
+		mov(s->r.b, s->r.b);
+		break;
+	case 0x41: // MOV B, C
+		mov(s->r.b, s->r.c);
+		break;
+	case 0x42: // MOV B, D
+		mov(s->r.b, s->r.d); 
+		break;
+	case 0x43: // MOV B, E
+		mov(s->r.b, s->r.e); 
+		break;
+	case 0x44: // MOV B, H
+		mov(s->r.b, s->r.h); 
+		break;
+	case 0x45: // MOV B, L
+		mov(s->r.b, s->r.l); 
+		break;
+	case 0x46: // MOV B, M
+		mov(s, s->r.b, false); 
+		break;
+	case 0x47: // MOV B, A
+		mov(s->r.b, s->r.a); 
+		break;
+	case 0x48: // MOV C, B
+		mov(s->r.c, s->r.b);
+		break;
+	case 0x49: // MOV C, C
+		mov(s->r.c, s->r.c);
+		break;
+	case 0x4A: // MOV C, D
+		mov(s->r.c, s->r.d);
+		break;
+	case 0x4B: // MOV C, E
+		mov(s->r.c, s->r.e);
+		break;
+	case 0x4C: // MOV C, H
+		mov(s->r.c, s->r.h);
+		break;
+	case 0x4D: // MOV C, L
+		mov(s->r.c, s->r.l);
+		break;
+	case 0x4E: // MOV C, M
+		mov(s, s->r.c, false);
+		break;
+	case 0x4F: // MOV C, A
+		mov(s->r.c, s->r.a);
+		break;
+	case 0x50: // MOV D, B
+		mov(s->r.d, s->r.b);
+		break;
 	case 0x51: // MOV D, C
 		mov(s->r.d, s->r.c);
 		break;
-
-	// Jumping ahead
+	case 0x52: // MOV D, D
+		mov(s->r.d, s->r.d);
+		break;
+	case 0x53: // MOV D, E
+		mov(s->r.d, s->r.e);
+		break;
+	case 0x54: // MOV D, H
+		mov(s->r.d, s->r.h);
+		break;
+	case 0x55: // MOV D, L
+		mov(s->r.d, s->r.l);
+		break;
+	case 0x56: // MOV D, M
+		mov(s, s->r.d, false);
+		break;
+	case 0x57: // MOV D, A
+		mov(s->r.d, s->r.a);
+		break;
+	case 0x58: // MOV E, B
+		mov(s->r.e, s->r.b);
+		break;
+	case 0x59: // MOV E, C
+		mov(s->r.e, s->r.c);
+		break;
+	case 0x5A: // MOV E, D
+		mov(s->r.e, s->r.d);
+		break;
+	case 0x5B: // MOV E, E
+		mov(s->r.e, s->r.e);
+		break;
+	case 0x5C: // MOV E, H
+		mov(s->r.e, s->r.h);
+		break;
+	case 0x5D: // MOV E, L
+		mov(s->r.e, s->r.l);
+		break;
+	case 0x5E: // MOV E, M
+		mov(s, s->r.e, false);
+		break;
+	case 0x5F: // MOV E, A
+		mov(s->r.e, s->r.a);
+		break;
+	case 0x60: // MOV H, B
+		mov(s->r.h, s->r.b);
+		break;
+	case 0x61: // MOV H, C
+		mov(s->r.h, s->r.c);
+		break;
+	case 0x62: // MOV H, D
+		mov(s->r.h, s->r.d);
+		break;
+	case 0x63: // MOV H, E
+		mov(s->r.h, s->r.e);
+		break;
+	case 0x64: // MOV H, H
+		mov(s->r.h, s->r.h);
+		break;
+	case 0x65: // MOV H, L
+		mov(s->r.h, s->r.l);
+		break;
+	case 0x66: // MOV H, M
+		mov(s, s->r.h, false);
+		break;
+	case 0x67: // MOV H, A
+		mov(s->r.h, s->r.a);
+		break;
+	case 0x68: // MOV L, B
+		mov(s->r.l, s->r.b);
+		break;
+	case 0x69: // MOV L, C
+		mov(s->r.l, s->r.c);
+		break;
+	case 0x6A: // MOV L, D
+		mov(s->r.l, s->r.d);
+		break;
+	case 0x6B: // MOV L, E
+		mov(s->r.l, s->r.e);
+		break;
+	case 0x6C: // MOV L, H
+		mov(s->r.l, s->r.h);
+		break;
+	case 0x6D: // MOV L, L
+		mov(s->r.l, s->r.l);
+		break;
+	case 0x6E: // MOV L, M
+		mov(s, s->r.l, false);
+		break;
+	case 0x6F: // MOV M, A
+		mov(s->r.l, s->r.a);
+		break;
+	case 0x70: // MOV M, B
+		mov(s, s->r.b, true);
+		break;
+	case 0x71: // MOV M, C
+		mov(s, s->r.c, true);
+		break;
+	case 0x72: // MOV M, D
+		mov(s, s->r.d, true);
+		break;
+	case 0x73: // MOV M, E
+		mov(s, s->r.e, true);
+		break;
+	case 0x74: // MOV M, H
+		mov(s, s->r.h, true);
+		break;
+	case 0x75: // MOV M, L
+		mov(s, s->r.l, true);
+		break;
+	case 0x76: // HLT
+		unimplementedInstruction(*opcode); break;
+	case 0x77: // MOV M, A
+		mov(s, s->r.a, true);
+		break;
+	case 0x78: // MOV A, B
+		mov(s->r.a, s->r.b);
+		break;
+	case 0x79: // MOV A, C
+		mov(s->r.a, s->r.c);
+		break;
+	case 0x7A: // MOV A, D
+		mov(s->r.a, s->r.d);
+		break;
+	case 0x7B: // MOV A, E
+		mov(s->r.a, s->r.e);
+		break;
+	case 0x7C: // MOV A, H
+		mov(s->r.a, s->r.h);
+		break;
+	case 0x7D: // MOV A, L
+		mov(s->r.a, s->r.l);
+		break;
+	case 0x7E: // MOV A, M
+		mov(s, s->r.a, false);
+		break;
+	case 0x7F: // MOV A, A
+		mov(s->r.a, s->r.a);
+		break;
 	case 0x80: // ADD B
 		add(s, s->r.a, s->r.b, true); 
 		break;
