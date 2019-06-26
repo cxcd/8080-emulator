@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iterator>
 
+// CPU
 class conditionCodes {
 public:
 	uint8_t z, s, p, cy, ac;
@@ -32,14 +33,18 @@ public:
 };
 
 // Exit program when an unimplemented instruction is encountered
-int unimplementedInstruction(uint8_t opcode) {
+void unimplementedInstruction(uint8_t opcode) {
 	std::cout << "Error: Instruction " 
 			  << std::uppercase << std::hex << std::setw(2) << std::setfill('0') 
 			  << (int)opcode << " is unimplemented\n";
-	return 0;
+	std::exit(1);
 }
 
-void printState(state *s) {
+// Print CPU state
+void printState(state *s, uint8_t opcode) {
+	std::cout	<< "PC: " << s->r.pc << " Opcode: " 
+				<< std::uppercase << std::hex << std::setw(2) << std::setfill('0') 
+				<< (int)opcode << "\n";
 	std::cout	<< "Z:" << std::bitset<1>(s->cc.z)
 				<< " S:" << std::bitset<1>(s->cc.s)
 				<< " P:" << std::bitset<1>(s->cc.p)
@@ -124,7 +129,6 @@ void add(state *s, uint8_t &reg1, uint8_t &reg2, uint8_t &reg3, uint8_t &reg4) {
 	reg2 = result & 0xFF;
 	checkCarry(s, result);
 }
-
 // Add value and carry to 8 bit register
 void adc(state *s, uint8_t &reg, uint8_t val, bool cy) {
 	uint16_t result = (uint16_t)reg + (uint16_t)val + s->cc.cy;
@@ -143,6 +147,31 @@ void sub(uint8_t &reg1, uint8_t &reg2, uint8_t val) {
 	uint16_t result = (reg1 << 8 | reg2) - val;
 	reg1 = result >> 8;
 	reg2 = result & 0xFF;
+}
+// Subtract value and carry from 8 bit register
+void sbb(state *s, uint8_t &reg, uint8_t val, bool cy) {
+	uint16_t result = (uint16_t)reg - (uint16_t)val - s->cc.cy;
+	reg = result & 0xFF;
+	checkFlags(s, result, cy);
+}
+
+// AND value from 8 bit register
+void ana(state *s, uint8_t &reg, uint8_t val) {
+	uint16_t result = (uint16_t)reg & (uint16_t)val;
+	reg = result & 0xFF;
+	checkFlags(s, result, true);
+}
+// XOR value from 8 bit register
+void xra(state *s, uint8_t &reg, uint8_t val) {
+	uint16_t result = (uint16_t)reg ^ (uint16_t)val;
+	reg = result & 0xFF;
+	checkFlags(s, result, true);
+}
+// OR value from 8 bit register
+void ora(state *s, uint8_t &reg, uint8_t val) {
+	uint16_t result = (uint16_t)reg | (uint16_t)val;
+	reg = result & 0xFF;
+	checkFlags(s, result, true);
 }
 
 // Move 8 bit register to 8 bit register
@@ -350,11 +379,15 @@ void emulate8080(state *s) {
 	case 0x3B: // DCX SP
 		unimplementedInstruction(*opcode); break;
 	case 0x3C: // INR A
-		unimplementedInstruction(*opcode); break;
+		add(s, s->r.a, (uint8_t)1, false); 
+		break;
 	case 0x3D: // DCR A
-		unimplementedInstruction(*opcode); break;
+		sub(s, s->r.a, (uint8_t)1, false); 
+		break;
 	case 0x3E: // MVI A, D8
-		unimplementedInstruction(*opcode); break;
+		s->r.a = opcode[1];
+		s->r.pc++; 
+		break;
 	case 0x3F: // CMC
 		s->cc.cy = ~s->cc.cy;
 		break;
@@ -599,14 +632,168 @@ void emulate8080(state *s) {
 	case 0x8F: // ADC A
 		adc(s, s->r.a, s->r.a, true);
 		break;
+	case 0x90: // SUB B
+		sub(s, s->r.a, s->r.b, true);
+		break;
+	case 0x91: // SUB C
+		sub(s, s->r.a, s->r.c, true); 
+		break;
+	case 0x92: // SUB D
+		sub(s, s->r.a, s->r.d, true); 
+		break;
+	case 0x93: // SUB E
+		sub(s, s->r.a, s->r.e, true); 
+		break;
+	case 0x94: // SUB H
+		sub(s, s->r.a, s->r.h, true); 
+		break;
+	case 0x95: // SUB L
+		sub(s, s->r.a, s->r.l, true); 
+		break;
+	case 0x96: // SUB M
+		s->offset = (s->r.h << 8) | s->r.l;
+		sub(s, s->r.a, s->memory[s->offset], true); 
+		break;
+	case 0x97: // SUB A
+		sub(s, s->r.a, s->r.a, true); 
+		break;
+	case 0x98: // SBB B
+		sbb(s, s->r.a, s->r.b, true); 
+		break;
+	case 0x99: // SBB C
+		sbb(s, s->r.a, s->r.c, true); 
+		break;
+	case 0x9A: // SBB D
+		sbb(s, s->r.a, s->r.d, true); 
+		break;
+	case 0x9B: // SBB E
+		sbb(s, s->r.a, s->r.e, true); 
+		break;
+	case 0x9C: // SBB H
+		sbb(s, s->r.a, s->r.h, true); 
+		break;
+	case 0x9D: // SBB L
+		sbb(s, s->r.a, s->r.l, true); 
+		break;
+	case 0x9E: // SBB M
+		s->offset = (s->r.h << 8) | s->r.l;
+		sbb(s, s->r.a, s->memory[s->offset], true); 
+		break;
+	case 0x9F: // SBB A
+		sbb(s, s->r.a, s->r.a, true); 
+		break;
+
+	case 0xA0: // ANA B
+		ana(s, s->r.a, s->r.b);
+		break;
+	case 0xA1: // ANA C
+		ana(s, s->r.a, s->r.c); 
+		break;
+	case 0xA2: // ANA D
+		ana(s, s->r.a, s->r.d);
+		break;
+	case 0xA3: // ANA E
+		ana(s, s->r.a, s->r.e); 
+		break;
+	case 0xA4: // ANA H
+		ana(s, s->r.a, s->r.h); 
+		break;
+	case 0xA5: // ANA L
+		ana(s, s->r.a, s->r.l); 
+		break;
+	case 0xA6: // ANA M
+		s->offset = (s->r.h << 8) | s->r.l;
+		ana(s, s->r.a, s->memory[s->offset]); 
+		break;
+	case 0xA7: // ANA A
+		ana(s, s->r.a, s->r.a); 
+		break;
+	case 0xA8: // XRA B
+		xra(s, s->r.a, s->r.b);
+		break;
+	case 0xA9: // XRA C
+		xra(s, s->r.a, s->r.c);
+		break;
+	case 0xAA: // XRA D
+		xra(s, s->r.a, s->r.d);
+		break;
+	case 0xAB: // XRA E
+		xra(s, s->r.a, s->r.e);
+		break;
+	case 0xAC: // XRA H
+		xra(s, s->r.a, s->r.h);
+		break;
+	case 0xAD: // XRA L
+		xra(s, s->r.a, s->r.l);
+		break;
+	case 0xAE: // XRA M
+		s->offset = (s->r.h << 8) | s->r.l;
+		xra(s, s->r.a, s->memory[s->offset]);
+		break;
+	case 0xAF: // XRA A
+		xra(s, s->r.a, s->r.a);
+		break;
+	case 0xB0: // ORA B
+		xra(s, s->r.a, s->r.b);
+		break;
+	case 0xB1: // ORA C
+		xra(s, s->r.a, s->r.c);
+		break;
+	case 0xB2: // ORA D
+		xra(s, s->r.a, s->r.d);
+		break;
+	case 0xB3: // ORA E
+		xra(s, s->r.a, s->r.e);
+		break;
+	case 0xB4: // ORA H
+		xra(s, s->r.a, s->r.h);
+		break;
+	case 0xB5: // ORA L
+		xra(s, s->r.a, s->r.l);
+		break;
+	case 0xB6: // ORA M
+		s->offset = (s->r.h << 8) | s->r.l;
+		xra(s, s->r.a, s->memory[s->offset]);
+		break;
+	case 0xB7: // ORA A
+		xra(s, s->r.a, s->r.a);
+		break;
+
+
+	// Jumping ahead
+	case 0xC2: // JNZ adr
+		if (s->cc.z) {
+			s->r.pc = (opcode[2] << 8) | opcode[1];
+		} else {
+			s->r.pc += 2;
+		}
+		break;
+	case 0xC3: // JMP adr
+		s->r.pc = (opcode[2] << 8) | opcode[1];
+		break;
+
+	// Jumping ahead
+	case 0xC9: // RET
+		s->r.pc = s->memory[s->r.sp] | (s->memory[s->r.sp + 1] << 8);
+		s->r.sp += 2;
+		break;
+
+	// Jumping ahead
+	case 0xCD: // CALL adr
+		s->offset = s->r.pc + 2;
+		s->memory[s->r.sp - 1] = (s->offset >> 8) & 0xff;
+		s->memory[s->r.sp - 2] = (s->offset & 0xff);
+		s->r.sp = s->r.sp - 2;
+		s->r.pc = (opcode[2] << 8) | opcode[1];
+		break;
 
 	// Jumping to end
-	case 0xFF: unimplementedInstruction(*opcode); break;
+	case 0xFF: // RST 7
+		unimplementedInstruction(*opcode); break;
 	default: unimplementedInstruction(*opcode); break;
 	}
 	// Print state
-	std::cout << "PC:" << s->r.pc << "\n";
-	printState(s);
+	printState(s, *opcode);
 	// Increment program counter
 	s->r.pc++;
 }
@@ -631,7 +818,7 @@ int main(int argc, char *argv[]) {
 	readFile(&s, "test.bin");
 	// Print state
 	std::cout << "Init\n";
-	printState(&s);
+	printState(&s, 0);
 	// Emulate
 	while (s.r.pc < s.memory.size()) {
 		emulate8080(&s);
