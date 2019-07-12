@@ -188,6 +188,12 @@ void mov(state *s, uint8_t &reg, bool toHL) {
 	}
 }
 
+// Compare register with accumulator
+void cmp(state *s, uint8_t &reg) {
+	uint16_t result = (uint16_t)s->r.a - (uint16_t)reg;
+	checkFlags(s, result, true);
+}
+
 // Parse code and execute instruction
 void emulate8080(state *s) {
 	// Get the current instruction from the program counter
@@ -758,9 +764,38 @@ void emulate8080(state *s) {
 	case 0xB7: // ORA A
 		xra(s, s->r.a, s->r.a);
 		break;
-
-
-	// Jumping ahead
+	case 0xB8: // CMP B
+		cmp(s, s->r.b);
+		break;
+	case 0xB9: // CMP C
+		cmp(s, s->r.c);
+		break;
+	case 0xBA: // CMP D
+		cmp(s, s->r.d);
+		break;
+	case 0xBB: // CMP E
+		cmp(s, s->r.e);
+		break;
+	case 0xBC: // CMP H
+		cmp(s, s->r.h);
+		break;
+	case 0xBD: // CMP L
+		cmp(s, s->r.l);
+		break;
+	case 0xBE: // CMP M
+		s->offset = (s->r.h << 8) | s->r.l;
+		cmp(s, s->memory[s->offset]);
+		break;
+	case 0xBF: // CMP A
+		cmp(s, s->r.a);
+		break;
+	case 0xC0: // RNZ
+		unimplementedInstruction(*opcode); break;
+	case 0xC1: // POP B
+		s->r.c = s->memory[s->r.sp];
+		s->r.b = s->memory[s->r.sp + 1];
+		s->r.sp += 2;
+		break;
 	case 0xC2: // JNZ adr
 		if (s->cc.z) {
 			s->r.pc = (opcode[2] << 8) | opcode[1];
@@ -770,6 +805,13 @@ void emulate8080(state *s) {
 		break;
 	case 0xC3: // JMP adr
 		s->r.pc = (opcode[2] << 8) | opcode[1];
+		break;
+	case 0xC4: // CNZ adr
+		unimplementedInstruction(*opcode); break;
+	case 0xC5: // PUSH B
+		s->memory[s->r.sp - 1] = s->r.b;
+		s->memory[s->r.sp - 2] = s->r.c;
+		s->r.sp -= 2;
 		break;
 
 	// Jumping ahead
