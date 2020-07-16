@@ -23,5 +23,11 @@
     <None Include="test.bin">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="invaders.bin">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="cpudiag.bin">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
